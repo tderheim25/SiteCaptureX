@@ -28,7 +28,17 @@ import React, { useState, useEffect } from 'react'
          setProfile(userProfile) 
        } 
      } catch (error) { 
-       console.log('Error loading user:', error.message) 
+        const msg = error?.message || ''
+        // Avoid noisy console logs when DB tables are not yet initialized
+        if (
+          msg.includes('relation "public.profiles" does not exist') ||
+          msg.includes('Could not find the table') ||
+          msg.includes('Database not initialized')
+        ) {
+          // silent
+        } else {
+          console.log('Error loading user:', msg)
+        }
      } finally { 
        setLoading(false) 
      } 
