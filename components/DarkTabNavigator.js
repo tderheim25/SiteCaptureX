@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,10 +6,30 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import SitesScreen from '../screens/SitesScreen';
 import AdminPanel from '../screens/AdminPanel';
+import { AuthService } from '../lib/AuthService';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
 const DarkTabNavigator = () => {
+  const [role, setRole] = useState('user');
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const current = await AuthService.getCurrentUser();
+        if (current) {
+          const profile = await AuthService.getProfile(current.id);
+          if (isMounted) setRole(profile.role || 'user');
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { isMounted = false; };
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -17,19 +37,20 @@ const DarkTabNavigator = () => {
           let iconName;
 
           if (route.name === 'Sites') {
-            iconName = focused ? 'globe' : 'globe-outline';
+            iconName = focused ? 'construct' : 'construct-outline';
           } else if (route.name === 'Capture') {
-            iconName = 'add';
+            iconName = 'camera';
           } else if (route.name === 'User Management') {
             iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
           }
 
-          // Special styling for the center capture button
           if (route.name === 'Capture') {
             return (
               <View style={styles.captureButton}>
                 <LinearGradient
-                  colors={['#00D4AA', '#00B894']}
+                  colors={["#00D4AA", "#00B894"]}
                   style={styles.captureGradient}
                 >
                   <Ionicons name={iconName} size={28} color="white" />
@@ -43,24 +64,12 @@ const DarkTabNavigator = () => {
         tabBarActiveTintColor: '#00D4AA',
         tabBarInactiveTintColor: '#8E8E93',
         tabBarStyle: {
-          position: 'absolute',
-          bottom: 25,
-          left: 20,
-          right: 20,
-          elevation: 8,
-          backgroundColor: 'rgba(45, 55, 72, 0.95)', // Dark background
-          borderRadius: 25,
-          height: 70,
-          paddingBottom: 10,
-          paddingTop: 10,
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 4,
-          },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
+          // Pin to bottom edge (no floating pill)
+          backgroundColor: 'rgba(45, 55, 72, 0.98)',
           borderTopWidth: 0,
+          height: 70,
+          paddingBottom: 8,
+          paddingTop: 10,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -90,11 +99,19 @@ const DarkTabNavigator = () => {
           tabBarIconStyle: { marginTop: -10 }
         }}
       />
-      <Tab.Screen 
-        name="User Management" 
-        component={AdminPanel}
-        options={{ tabBarLabel: 'User Management' }}
-      />
+      {role === 'admin' ? (
+        <Tab.Screen 
+          name="User Management" 
+          component={AdminPanel}
+          options={{ tabBarLabel: 'User Management' }}
+        />
+      ) : (
+        <Tab.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ tabBarLabel: 'Profile' }}
+        />
+      )}
     </Tab.Navigator>
   );
 };

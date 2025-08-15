@@ -90,7 +90,13 @@ import React, { useState, useEffect } from 'react'
          {profile && (profile.role === 'admin' || profile.role === 'manager') && ( 
            <TouchableOpacity 
              style={styles.adminButton} 
-             onPress={() => navigation.navigate('AdminPanel')} 
+             onPress={() => {
+               if (profile.role !== 'admin') {
+                 Alert.alert('Access Denied', 'Only administrators can access User Management.')
+                 return
+               }
+               navigation.navigate('AdminPanel')
+             }} 
            > 
              <Text style={styles.adminButtonText}>User Management</Text> 
            </TouchableOpacity> 

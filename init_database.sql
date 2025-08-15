@@ -8,6 +8,13 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+-- Step 1.1: Create user_status enum type
+DO $$ BEGIN
+    CREATE TYPE user_status AS ENUM ('active', 'disabled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- Step 2: Create profiles table
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
@@ -17,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   avatar_url text,
   website text,
   role user_role DEFAULT 'user',
+  status user_status DEFAULT 'active',
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   CONSTRAINT username_length CHECK (char_length(username) >= 3)
 );

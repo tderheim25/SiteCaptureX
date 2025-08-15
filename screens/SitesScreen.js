@@ -31,6 +31,7 @@ const SitesScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
+  const [userRole, setUserRole] = useState('user') // Add user role state
 
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [newSite, setNewSite] = useState({ name: '', address: '', status: 'active', project_code: '' })
@@ -38,7 +39,24 @@ const SitesScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadSites()
+    checkUserRole()
   }, [])
+
+  // Add function to check user role
+  const checkUserRole = async () => {
+    try {
+      const currentUser = await AuthService.getCurrentUser()
+      if (currentUser) {
+        const profile = await AuthService.getProfile(currentUser.id)
+        setUserRole(profile.role || 'user')
+      }
+    } catch (error) {
+      console.log('Error checking user role:', error.message)
+    }
+  }
+
+  // Check if user can add sites (only managers and admins)
+  const canAddSites = userRole === 'manager' || userRole === 'admin'
 
   const loadSites = async (isRefresh = false) => {
     try {
@@ -58,25 +76,30 @@ const SitesScreen = ({ navigation }) => {
     setSearch(q)
     if (!q.trim()) {
       setFiltered(sites)
-      return
-    }
-    const lower = q.toLowerCase()
-    setFiltered(
-      sites.filter(s =>
-        (s.name || '').toLowerCase().includes(lower) ||
-        (s.address || '').toLowerCase().includes(lower) ||
-        (s.project_code || '').toLowerCase().includes(lower) ||
-        (s.status || '').toLowerCase().includes(lower)
+    } else {
+      const filtered = sites.filter(site => 
+        site.name?.toLowerCase().includes(q.toLowerCase()) ||
+        site.project_code?.toLowerCase().includes(q.toLowerCase())
       )
-    )
+      setFiltered(filtered)
+    }
   }
 
   const openAdd = () => {
+    if (!canAddSites) {
+      Alert.alert('Permission Denied', 'Only managers and administrators can add new sites.')
+      return
+    }
     setNewSite({ name: '', address: '', status: 'active', project_code: '' })
     setIsAddOpen(true)
   }
 
   const saveSite = async () => {
+    if (!canAddSites) {
+      Alert.alert('Permission Denied', 'Only managers and administrators can add new sites.')
+      return
+    }
+    
     if (!newSite.name.trim()) {
       Alert.alert('Validation', 'Please enter a site name')
       return
@@ -114,7 +137,7 @@ const SitesScreen = ({ navigation }) => {
         </View>
       )}
       <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.viewButton} onPress={() => { /* placeholder: navigate to details later */ }}>
+        <TouchableOpacity style={styles.viewButton} onPress={() => navigation.navigate('SiteDetails', { site: item })}>
           <Text style={styles.viewButtonText}>View Site</Text>
           <Ionicons name="open-outline" size={16} color="#fff" />
         </TouchableOpacity>
@@ -127,10 +150,12 @@ const SitesScreen = ({ navigation }) => {
       <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
         <Text style={styles.title}>Job Sites</Text>
         <Text style={styles.subtitle}>Manage photos and documentation for all your projects</Text>
-        <TouchableOpacity style={styles.newSiteButton} onPress={openAdd}>
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.newSiteText}>New Site</Text>
-        </TouchableOpacity>
+        {canAddSites && (
+          <TouchableOpacity style={styles.newSiteButton} onPress={openAdd}>
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.newSiteText}>New Site</Text>
+          </TouchableOpacity>
+        )}
       </LinearGradient>
 
       <View style={styles.searchContainer}>
@@ -156,7 +181,9 @@ const SitesScreen = ({ navigation }) => {
         style={styles.list}
         ListEmptyComponent={
           !loading ? (
-            <Text style={styles.emptyText}>No sites yet. Tap New Site to add your first project.</Text>
+            <Text style={styles.emptyText}>
+              {canAddSites ? 'No sites yet. Tap New Site to add your first project.' : 'No sites available.'}
+            </Text>
           ) : null
         }
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadSites(true)} />}
@@ -164,12 +191,14 @@ const SitesScreen = ({ navigation }) => {
         contentContainerStyle={filtered.length === 0 ? { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20 } : { paddingHorizontal: 20, paddingBottom: 40 }}
       />
 
-      {/* Floating add button inside the tab */}
-      <TouchableOpacity style={styles.fab} onPress={openAdd}>
-        <LinearGradient colors={["#00D4AA", "#00B894"]} style={styles.fabGradient}>
-          <Ionicons name="add" size={26} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
+      {/* Floating add button inside the tab - only show for managers/admins */}
+      {canAddSites && (
+        <TouchableOpacity style={styles.fab} onPress={openAdd}>
+          <LinearGradient colors={["#00D4AA", "#00B894"]} style={styles.fabGradient}>
+            <Ionicons name="add" size={26} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
 
       <Modal visible={isAddOpen} transparent animationType="fade" onRequestClose={() => setIsAddOpen(false)}>
         <View style={styles.modalBackdrop}>

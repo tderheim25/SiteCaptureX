@@ -1,4 +1,4 @@
-import React, { useState } from 'react' 
+import React, { useState, useRef, useEffect } from 'react' 
  import { 
    View, 
    Text, 
@@ -8,9 +8,14 @@ import React, { useState } from 'react'
    Alert, 
    KeyboardAvoidingView, 
    Platform, 
-   ScrollView 
+   ScrollView, 
+   Image,
+   ActivityIndicator,
+   Animated,
+   Easing
  } from 'react-native' 
  import { AuthService } from '../lib/AuthService' 
+ import { Ionicons } from '@expo/vector-icons'
  
  const SignUpScreen = ({ navigation }) => { 
    const [formData, setFormData] = useState({ 
@@ -56,6 +61,28 @@ import React, { useState } from 'react'
      return true 
    } 
  
+   const rotation = useRef(new Animated.Value(0)).current
+   useEffect(() => {
+     if (loading) {
+       Animated.loop(
+         Animated.timing(rotation, {
+           toValue: 1,
+           duration: 1200,
+           easing: Easing.linear,
+           useNativeDriver: true,
+         })
+       ).start()
+     } else {
+       rotation.stopAnimation()
+       rotation.setValue(0)
+     }
+   }, [loading])
+
+   const spin = rotation.interpolate({
+     inputRange: [0, 1],
+     outputRange: ['0deg', '360deg'],
+   })
+ 
    const handleSignUp = async () => { 
      if (!validateForm()) return 
  
@@ -96,6 +123,11 @@ import React, { useState } from 'react'
      > 
        <ScrollView contentContainerStyle={styles.scrollContainer}> 
          <View style={styles.formContainer}> 
+           <Image 
+             source={{ uri: 'https://ryuzzetivvijkiribkzt.supabase.co/storage/v1/object/public/SiteCaptureXLogo/SiteCaptureX%20logo%20cropped.png' }} 
+             style={styles.logo} 
+           /> 
+           <Text style={styles.poweredBy}>Powered by Derheim Inc</Text>
            <Text style={styles.title}>Create Account</Text> 
            
            <TextInput 
@@ -161,6 +193,16 @@ import React, { useState } from 'react'
            </TouchableOpacity> 
          </View> 
        </ScrollView> 
+
+       {loading && (
+         <View style={styles.loaderOverlay}>
+           <Animated.View style={{ transform: [{ rotate: spin }], marginBottom: 12 }}>
+             <Ionicons name="construct-outline" size={64} color="#F59E0B" />
+           </Animated.View>
+           <Text style={styles.loaderText}>Creating your account...</Text>
+           <ActivityIndicator size="large" color="#007AFF" />
+         </View>
+       )}
      </KeyboardAvoidingView> 
    ) 
  } 
@@ -227,6 +269,36 @@ import React, { useState } from 'react'
      textAlign: 'center', 
      fontSize: 16, 
    }, 
+   logo: { 
+     width: 320, 
+     height: 320, 
+     resizeMode: 'contain', 
+     alignSelf: 'center', 
+     marginBottom: 8, 
+   }, 
+   poweredBy: {
+     textAlign: 'center',
+     color: '#888',
+     fontSize: 12,
+     marginBottom: 12,
+   },
+   loaderOverlay: {
+     position: 'absolute',
+     top: 0,
+     left: 0,
+     right: 0,
+     bottom: 0,
+     backgroundColor: 'rgba(0,0,0,0.35)',
+     justifyContent: 'center',
+     alignItems: 'center',
+     padding: 24,
+   },
+   loaderText: {
+     color: '#fff',
+     fontSize: 16,
+     fontWeight: '600',
+     marginBottom: 8,
+   },
  }) 
  
  export default SignUpScreen
